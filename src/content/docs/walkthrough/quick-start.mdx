@@ -1,0 +1,47 @@
+---
+title: Quick Start
+description: Install the upstream product and run heuristic fixture demos without AWS credentials.
+---
+
+Clone the upstream product (not this docs site) and exercise the shared core locally.
+
+```bash
+git clone https://github.com/jajera/pr-readiness-coach.git
+cd pr-readiness-coach
+npm install
+npm run build
+npm test
+```
+
+## Fixture demo (no Bedrock)
+
+```bash
+chmod +x fixtures/demo.sh
+./fixtures/demo.sh
+```
+
+Or run the CLI directly:
+
+```bash
+npm run pr-ready -- --local --path fixtures/demo-app/not-ready
+npm run pr-ready -- --local --path fixtures/demo-app/ready
+```
+
+Expected:
+
+| Path | Verdict | Exit |
+|------|---------|------|
+| `fixtures/demo-app/not-ready` | **NOT READY** | `1` |
+| `fixtures/demo-app/ready` | **READY** | `0` |
+
+All fixture secrets are placeholders only.
+
+:::tip
+`--local` is heuristic-only. Full Bedrock mode needs `AWS_REGION` (or `AWS_DEFAULT_REGION`) and credentials that can call Bedrock in that region.
+:::
+
+## Next steps
+
+1. [CLI reference](/walkthrough/cli/) — modes, flags, exit codes
+2. [Architecture](/architecture/overview/) — how surfaces share one core
+3. [AWS Deploy](/walkthrough/deploy-aws/) — when you are ready for API + UI

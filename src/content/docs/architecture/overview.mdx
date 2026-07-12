@@ -1,0 +1,42 @@
+---
+title: System Overview
+description: Shared-core architecture for CLI, Lambda API, Kiro hooks, Cognito owner UI, DynamoDB history, and Amplify zip hosting.
+---
+
+import Tooltip from '@/components/Tooltip.astro';
+
+![PR Readiness Coach architecture showing clients, Amplify, Cognito, API Gateway, Lambda, Bedrock, and DynamoDB](/pr-readiness-coach-walkthrough/diagrams/pr-readiness-architecture.svg)
+
+Entrypoints share one TypeScript core under `src/core/` so local demos, CI comments, IDE hooks, and the UI stay comparable — same prompts, heuristics, and report schema.
+
+## Components
+
+| Piece | Role |
+|-------|------|
+| CLI (`pr-ready`) | Local analysis against git, `--path`, or remote API |
+| Lambda + API Gateway | `POST /analyze` for machine clients; Cognito routes for the UI |
+| Bedrock | Diff Analyst + Risk Reviewer (Nova Lite) and Ship Coach (Claude Haiku 4.5 AU profile) |
+| DynamoDB | Optional run history (`-c enableDynamo=true`), ~30-day TTL |
+| Cognito | Owner-only SPA auth — self-sign-up disabled |
+| Amplify Hosting | SPA zip-deployed after CDK — not Git-connected |
+
+## Dual auth
+
+| Client | Credential | Routes |
+|--------|------------|--------|
+| GitHub Actions / CLI | API key (`x-api-key`) | `POST /analyze` |
+| Amplify SPA | Cognito JWT `Authorization: Bearer` | `GET /runs`, `GET /runs/{runId}`, `POST /ui/analyze` |
+
+:::caution
+Do **not** put the API key in Amplify / Vite env. The browser uses Cognito JWTs only (`VITE_*` for API URL and Cognito IDs).
+:::
+
+## Deploy shape
+
+Infrastructure is AWS CDK (TypeScript) in `ap-southeast-2`:
+
+1. CDK creates API + Lambda + Cognito + DynamoDB + Amplify app/branch (`enableAutoBuild: false`)
+2. Separate `deploy-amplify` job / `npm run deploy:amplify` builds `web/` and zip-uploads
+3. GitHub Actions <Tooltip term="oidc" label="OIDC" /> on `main` — no long-lived AWS keys in the product repo
+
+Editable diagram source for this site: `docs/pr-readiness-architecture.drawio` (SVG served from `public/diagrams/`).

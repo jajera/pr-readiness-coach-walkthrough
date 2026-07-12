@@ -1,0 +1,132 @@
+---
+title: AWS Deploy
+description: Credentials, Bedrock model smoke tests, CDK bootstrap and deploy, Cognito owner invite, and stack output retrieval.
+---
+
+import Tooltip from '@/components/Tooltip.astro';
+
+Infrastructure is AWS CDK under upstream `infra/`. The app stack is API Gateway + Lambda + Cognito + DynamoDB (`-c enableDynamo=true`) + Amplify app/branch. It does **not** define product S3 buckets. The SPA artifact is <Tooltip term="amplify-zip" label="zip-deployed" /> separately after CDK — not via a GitHub↔Amplify Git connection.
+
+Lambda defaults: Node.js 24.x, 90s timeout, 512 MB; Bedrock invoke/converse IAM scoped to Nova Lite + Haiku 4.5 ARNs (not `*`).
+
+## Credentials
+
+Use one account/region for the session. Export once; do not pass `--profile` on every later command:
+
+```bash
+aws sso login --profile sandbox
+export AWS_PROFILE=sandbox
+export AWS_REGION=ap-southeast-2
+export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+export CDK_DEFAULT_REGION=$AWS_REGION
+aws sts get-caller-identity
+```
+
+Also needed: Bedrock usable in that region (below). For GitHub deploy / PR analysis, configure [OIDC](/walkthrough/github-oidc/) and [PR comment secrets](/walkthrough/pr-comments/) — do not put AWS keys or the API key value in the repo.
+
+## Required Bedrock models
+
+Demo targets **`ap-southeast-2`**. Model availability is **not** global — invoke in the **same region** as `AWS_REGION` / Lambda. See [model regional availability](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) and [model access](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html).
+
+The Bedrock **Model access** console page is retired. Serverless foundation models are intended to enable on first invoke (Marketplace subscribe for 3P models; Anthropic may need a one-time use-case form). Amazon models (e.g. Nova) are not Marketplace agreement products. IAM or SCPs can still deny invoke.
+
+| Agent | Model | Bedrock model ID |
+|-------|-------|------------------|
+| Diff Analyst | Amazon Nova Lite | `amazon.nova-lite-v1:0` |
+| Risk Reviewer | Amazon Nova Lite | `amazon.nova-lite-v1:0` |
+| Ship Coach | Claude Haiku 4.5 (AU inference profile) | `au.anthropic.claude-haiku-4-5-20251001-v1:0` |
+
+Smoke Nova Lite (same profile/region as deploy):
+
+```bash
+aws bedrock get-foundation-model-availability --model-id amazon.nova-lite-v1:0
+aws bedrock-runtime converse \
+  --model-id amazon.nova-lite-v1:0 \
+  --messages '[{"role":"user","content":[{"text":"Hi"}]}]' \
+  --inference-config '{"maxTokens":16}'
+```
+
+Expect `authorizationStatus: AUTHORIZED` and a normal Converse reply. If you see `ValidationException: Operation not allowed` with `authorizationStatus: NOT_AUTHORIZED`, check Bedrock **Quotas** for Nova (TPM/RPM). Applied **0** with on-demand increase “Not supported” means the account cannot run inference until AWS grants default capacity — separate from IAM Admin.
+
+Also smoke Ship Coach:
+
+```bash
+aws bedrock-runtime converse \
+  --model-id au.anthropic.claude-haiku-4-5-20251001-v1:0 \
+  --messages '[{"role":"user","content":[{"text":"Hi"}]}]' \
+  --inference-config '{"maxTokens":16}'
+```
+
+**Alternatives** (override via env):
+
+- US regions: Claude 3.5 Haiku via `CLAUDE_MODEL_ID` / `SHIP_COACH_MODEL_ID`
+- Global Haiku 4.5 profile: `global.anthropic.claude-haiku-4-5-20251001-v1:0`
+- Do **not** default to Claude 3 Haiku (`anthropic.claude-3-haiku-20240307-v1:0`) — it is **LEGACY**
+- Claude unavailable: set `SHIP_COACH_MODEL_ID` or `CLAUDE_MODEL_ID` to `amazon.nova-lite-v1:0`
+- Cross-region Nova (if on-demand stays at 0): `NOVA_MODEL_ID=apac.amazon.nova-lite-v1:0`
+
+Override vars: `NOVA_MODEL_ID`, `CLAUDE_MODEL_ID`, or per-agent `DIFF_ANALYST_MODEL_ID`, `RISK_REVIEWER_MODEL_ID`, `SHIP_COACH_MODEL_ID`.
+
+:::danger
+Without working model access in the deploy region, full-mode CLI, Lambda `/analyze`, and playground degrade or fail. Heuristic-only (`--local` / `fixtures/demo.sh`) still works. Do not treat the stack as “AI demo ready” until Converse succeeds for Nova Lite and the Ship Coach model ID.
+:::
+
+## Bootstrap
+
+Before the first `cdk deploy`, bootstrap once. CDK creates toolkit stack `CDKToolkit` with assets bucket `cdk-hnb659fds-assets-<account>-<region>`, IAM publish/deploy roles, and SSM `/cdk-bootstrap/hnb659fds/version`. That bucket is CDK plumbing — not part of the Coach product — but remains and is reused on later deploys.
+
+```bash
+npx cdk bootstrap aws://$CDK_DEFAULT_ACCOUNT/$CDK_DEFAULT_REGION
+```
+
+If a hardened account denies `s3:PutBucketPublicAccessBlock`, retry with `--public-access-block-configuration false`. That flag only skips CDK attaching BPA via that API call — it does **not** make the assets bucket public.
+
+## Deploy
+
+```bash
+npm install
+npm run build
+npx cdk synth -c enableDynamo=true
+export PR_READY_OWNER_EMAIL=you@example.com
+npx cdk deploy --require-approval never -c enableDynamo=true -c ownerEmail="$PR_READY_OWNER_EMAIL"
+```
+
+Or: `npm run deploy` (passes `-c enableDynamo=true`). GitHub **Deploy** always enables DynamoDB. After CDK, run `npm run deploy:amplify` (or wait for GHA job `deploy-amplify`) so `AppUrl` serves the SPA — see [Owner UI](/walkthrough/owner-ui/).
+
+### Stack outputs
+
+| Output | Notes |
+|--------|--------|
+| `ApiUrl` | Base URL before `analyze` |
+| `ApiKeyId` | Use to retrieve the key **value** once — value is never a stack output |
+| Cognito IDs / region | For the SPA |
+| `AmplifyAppId` / `AmplifyBranchName` / `AppUrl` | Zip deploy + hosted UI |
+
+```bash
+aws apigateway get-api-key --api-key "$(aws cloudformation describe-stacks \
+  --stack-name PrReadinessCoachStack \
+  --query "Stacks[0].Outputs[?OutputKey=='ApiKeyId'].OutputValue" --output text)" \
+  --include-value --query value --output text
+```
+
+Store `PR_READY_API_KEY` and `PR_READY_API_URL` as GitHub secrets for [PR comments](/walkthrough/pr-comments/). **Do not** put the API key in Amplify / Vite env — the browser uses Cognito JWTs only.
+
+### Dual auth
+
+| Client | Credential | Routes |
+|--------|------------|--------|
+| GitHub Actions / CLI | API key (`x-api-key`) | `POST /analyze` |
+| Amplify SPA | Cognito JWT `Authorization: Bearer` | `GET /runs`, `GET /runs/{runId}`, `POST /ui/analyze` |
+
+## Pitfalls
+
+- IAM Admin ≠ inference if Bedrock quotas are 0 / `NOT_AUTHORIZED`
+- Vite `VITE_*` are bake-time — re-run `deploy-amplify` when API/Cognito outputs change
+- Prefer the minimum deploy IAM policy over `AdministratorAccess`; bootstrap stays a one-time wider admin step
+- OIDC trust too broad (`repo:OWNER/REPO:*` or `*`) weakens a public repo — lock deploy to `main` (see [GitHub OIDC](/walkthrough/github-oidc/))
+- Fork PRs do not receive Actions secrets
+- Full-mode AI can over-flag docs; heuristics + `docsPathAllowlist` remain the reproducible baseline
+
+:::tip
+Continue with [GitHub OIDC](/walkthrough/github-oidc/) for deploy-on-`main`, then [PR Comments](/walkthrough/pr-comments/) for analysis secrets.
+:::

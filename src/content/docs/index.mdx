@@ -1,0 +1,35 @@
+---
+title: PR Readiness Coach Walkthrough
+description: Documentation companion for deploying and using the PR Readiness Coach across CLI, API, CI, Kiro hooks, and owner UI.
+template: splash
+hero:
+  tagline: Check branch readiness before you open a pull request — local CLI, AWS API, GitHub Actions comments, Kiro hooks, and an owner UI sharing one core.
+  actions:
+    - text: Get Started
+      link: /walkthrough/overview/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/jajera/pr-readiness-coach
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import Tooltip from '@/components/Tooltip.astro';
+
+## What you'll learn
+
+<CardGrid>
+  <Card title="Run the coach locally" icon="rocket" link="/walkthrough/quick-start/">
+    Heuristic fixtures and full <Tooltip term="pr-ready" label="pr-ready" /> modes — no AWS required for the demo path.
+  </Card>
+  <Card title="See the architecture" icon="puzzle" link="/architecture/overview/">
+    Shared core powering CLI, Lambda, hooks, and Amplify SPA with dual <Tooltip term="api-key-auth" label="API key" /> / <Tooltip term="cognito-jwt" label="Cognito" /> auth.
+  </Card>
+  <Card title="Deploy to AWS" icon="seti:config" link="/walkthrough/deploy-aws/">
+    CDK stack, Bedrock models, <Tooltip term="amplify-zip" label="Amplify zip deploy" />, and OIDC on <code>main</code>.
+  </Card>
+  <Card title="Wire CI and IDE feedback" icon="approve-check" link="/walkthrough/pr-comments/">
+    Warn-only PR comments and <Tooltip term="warn-only" label="warn-only" /> Kiro hooks that coach without blocking merges.
+  </Card>
+</CardGrid>

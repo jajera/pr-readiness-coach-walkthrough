@@ -1,0 +1,58 @@
+---
+title: Troubleshooting
+description: Common failures for Bedrock access, Amplify zip deploy, OIDC trust, Cognito invites, and Kiro hook credentials.
+---
+
+## Bedrock / full mode
+
+| Symptom | Likely cause | What to try |
+|---------|--------------|-------------|
+| `Operation not allowed` / `NOT_AUTHORIZED` | Quotas at zero or model not authorized in region | Check Bedrock Quotas; smoke Converse for Nova Lite + Ship Coach profile ([AWS Deploy](/walkthrough/deploy-aws/)) |
+| `Region is missing` | No `AWS_REGION` / `AWS_DEFAULT_REGION` | Export region before CLI / hook |
+| Legacy Claude 3 Haiku denial | Using retired model ID | Prefer Haiku 4.5 AU profile or Nova-only override |
+| IAM Admin but still denied | Quotas / authorization, not IAM | Service Quotas request; Anthropic use-case / Marketplace may still apply |
+
+Heuristic-only (`--local`, fixtures, save hook) still works without Bedrock. Full-mode AI can over-flag docs — heuristics + `docsPathAllowlist` remain the reproducible baseline.
+
+## Amplify / owner UI
+
+| Symptom | Likely cause | What to try |
+|---------|--------------|-------------|
+| SPA points at old API | Vite bake-time env | Re-run `npm run deploy:amplify` after CDK output changes |
+| Cannot sign up | Self-sign-up disabled | Invite via `PR_READY_OWNER_EMAIL` / `admin-create-user` |
+| Stuck on temporary password | `FORCE_CHANGE_PASSWORD` | Complete SPA password change or `admin-set-user-password --permanent` |
+
+See [Owner UI](/walkthrough/owner-ui/) for invite and zip-deploy details.
+
+## Bootstrap / CDK
+
+| Symptom | Likely cause | What to try |
+|---------|--------------|-------------|
+| First deploy fails on assets / bootstrap | Account not bootstrapped | `cdk bootstrap` once per account/region |
+| `s3:PutBucketPublicAccessBlock` denied | Hardened account SCP | Retry bootstrap with `--public-access-block-configuration false` |
+| Prefer not to use AdminAccess for CI | Deploy role too wide | Use the minimum deploy IAM policy ([GitHub OIDC](/walkthrough/github-oidc/)); bootstrap stays a one-time wider admin step |
+
+API key **value** is never a stack output — retrieve once with `get-api-key --include-value` into GitHub Secrets only.
+
+## GitHub Actions
+
+| Symptom | Likely cause | What to try |
+|---------|--------------|-------------|
+| Assume-role fails | Trust not scoped to `main` / wrong repo | Fix OIDC `sub` — do not use `repo:OWNER/REPO:*` or `*` |
+| PR comment is heuristic-only | Missing `PR_READY_API_*` (or API non-200 / truncated diff) | Set all four secrets after deploy; fork PRs never get secrets |
+| Comment does not upsert | Missing HTML marker | Body must include `<!-- pr-readiness-coach -->` |
+| Large PR / HTTP 504 | Diff size or API Gateway ~29s sync limit | Expect local-heuristics fallback; raise awareness of 1 MB body limit |
+| Deploy logs look redacted | Intentional | Fetch `ApiUrl` / key locally — public logs mask sensitive outputs |
+
+Setup order: deploy stack → set secrets → open PR ([PR Comments](/walkthrough/pr-comments/)).
+
+## Kiro hooks
+
+| Symptom | Likely cause | What to try |
+|---------|--------------|-------------|
+| Missing credentials on Full hook | Env not inherited by Kiro process | Launch Kiro from a logged-in SSO shell |
+| Hook missing from panel | Wrong schema or stale UI | Use IDE `when`/`then` files (not CLI 3.0 `hooks[]`); reload window |
+| Save hook too slow | Full Bedrock on `fileEdited` | Keep save path heuristic-only (30s); full mode is `userTriggered` |
+| Fixture secrets trip the hook | Paths not allowlisted | Use `testPathAllowlist` in `ready.yml` for `tests/**` / `fixtures/**` |
+
+Hooks always exit `0` (warn-only). Do not claim Kiro runs inside GitHub Actions — see [Kiro Hooks](/walkthrough/kiro-hooks/).
