@@ -1,0 +1,28 @@
+---
+title: FAQ
+description: Frequently asked questions about scope, auth, warn-only CI, fixtures, and how this docs site relates to the product repo.
+---
+
+## Is this repository the product?
+
+No. This is the Astro documentation companion. Application code lives in [jajera/pr-readiness-coach](https://github.com/jajera/pr-readiness-coach).
+
+## Does CI block merges when the coach says NOT READY?
+
+No. PR analysis and Kiro hooks are warn-only — they always exit `0` and coach via comments/reports. Hard merge gates are out of scope for v1.
+
+## Why two auth mechanisms?
+
+Machine clients (CLI / GitHub Actions) use an API key on `POST /analyze`. The browser SPA uses Cognito JWTs on `/runs` and `/ui/analyze`. Never bake the API key into Vite.
+
+## Why zip-deploy Amplify instead of a Git connection?
+
+Avoids a GitHub token on Amplify and keeps SPA failures in a separate job after CDK. Vite env is bake-time, so the zip job must run after stack outputs exist.
+
+## Can I demo without AWS?
+
+Yes — `fixtures/demo.sh` and `--local --path` exercise heuristics only.
+
+## Which region?
+
+Defaults target `ap-southeast-2` with Nova Lite + Claude Haiku 4.5 AU inference profile. Model availability is regional — smoke Converse in the same region as deploy.

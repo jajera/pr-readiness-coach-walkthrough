@@ -1,0 +1,41 @@
+---
+title: CLI
+description: pr-ready CLI modes, flags, exit codes, and when full Bedrock versus heuristic-only analysis applies.
+---
+
+Install dependencies in the upstream product repo and run:
+
+```bash
+npm install
+npm run pr-ready -- --help
+```
+
+## Common modes
+
+1. **Full local analysis** (git repo + Bedrock via your AWS credentials):
+   `npm run pr-ready --`
+2. **Heuristic only** (no Bedrock):
+   `npm run pr-ready -- --local`
+3. **Fixture / directory mode** (no git; combine with `--local` for demos):
+   `npm run pr-ready -- --local --path fixtures/demo-app/not-ready`
+4. **JSON output** (report on stdout, progress on stderr):
+   `npm run pr-ready -- --local --path fixtures/demo-app/ready --json`
+5. **Remote API**:
+   `npm run pr-ready -- --api --api-url "$PR_READY_API_URL" --api-key "$PR_READY_API_KEY"`
+6. **Create a PR from the draft** (after a full-mode run; requires `gh` auth):
+   `npm run pr-ready -- --apply-draft`
+   Optional: `--draft-base main` (default `main`). Uses Ship Coach `draftPrTitle` / composed body. Does not auto-open a PR unless you pass `--apply-draft`.
+
+## Exit codes
+
+| Code | Meaning                                    |
+| ---- | ------------------------------------------ |
+| `0`  | READY or READY WITH WARNINGS               |
+| `1`  | NOT READY                                  |
+| `2`  | Usage / environment / API transport errors |
+
+## Region and credentials
+
+Full mode needs `AWS_REGION` (or `AWS_DEFAULT_REGION`) and credentials that can call Bedrock in that region. Without a region, the CLI degrades with `Region is missing`.
+
+Optional project rules live in root [`ready.yml`](/walkthrough/ready-yml/).

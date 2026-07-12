@@ -1,0 +1,91 @@
+---
+title: GitHub OIDC
+description: Deploy the PR Readiness Coach stack from GitHub Actions using OIDC, scoped trust, and a minimum IAM policy.
+---
+
+`.github/workflows/deploy.yml` in the product repo assumes an IAM role via OIDC — **no long-lived AWS access keys**. Safe for a public repository if secrets stay in GitHub and the role trust is scoped. Deploy also supports `workflow_dispatch` for a manual OIDC smoke without a code push.
+
+## 1. Create the GitHub OIDC identity provider
+
+Once per AWS account, if missing:
+
+- Provider URL: `https://token.actions.githubusercontent.com`
+- Audience: `sts.amazonaws.com`
+
+## 2. Create an IAM role
+
+Example name `github-pr-readiness-coach-deploy` with trust limited to **this** repository and **`main`** (do not use `*`):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        },
+        "StringLike": {
+          "token.actions.githubusercontent.com:sub": "repo:OWNER/REPO:ref:refs/heads/main"
+        }
+      }
+    }
+  ]
+}
+```
+
+### Minimum deploy permissions (prefer over AdministratorAccess)
+
+Scope the role to `cdk deploy` / `cdk destroy` of `PrReadinessCoachStack` with DynamoDB + Cognito + Amplify zip deploy. Assumes the account is already bootstrapped (`CDKToolkit` + `cdk-hnb659fds-assets-*`). Replace `ACCOUNT_ID` and `REGION` everywhere.
+
+| Sid | Covers |
+|-----|--------|
+| `CdkBootstrapLookup` | `ssm:GetParameter`, CFN describe/list, `sts:GetCallerIdentity`, AZ describe |
+| `CdkAssetsBucket` | S3 on `cdk-hnb659fds-assets-ACCOUNT_ID-REGION` (+ `/*`) |
+| `CloudFormationAppStack` | Create/update/delete/change-sets for `PrReadinessCoachStack/*` and `CDKToolkit/*` |
+| `IamForLambdaExecutionRole` | Create/tag/pass/attach policies on `role/PrReadinessCoachStack-*` |
+| `PassRoleToLambdaService` | `iam:PassRole` to `lambda.amazonaws.com` for stack roles |
+| `PassRoleCdkCfnExec` | Pass `cdk-hnb659fds-cfn-exec-role-ACCOUNT_ID-REGION` to CloudFormation |
+| `AssumeCdkBootstrapRoles` | Assume CDK deploy / file-publishing / image-publishing / lookup roles |
+| `LambdaFunction` | CRUD + invoke/tags on `function:PrReadinessCoachStack-*` |
+| `ApiGateway` | REST APIs, API keys, usage plans, tags in the region |
+| `DynamoDbOptionalRunHistory` | Table + index under `PrReadinessCoachStack-*` |
+| `CognitoOwnerUi` | User pool / client / admin user / tags |
+| `AmplifyHostingZipDeploy` | App, branch, create/start deployment, jobs, tags |
+| `CloudWatchLogsForLambda` | Log groups under `/aws/lambda/PrReadinessCoachStack-*` |
+
+Policy notes:
+
+- This role **deploys** infra; it does **not** need `bedrock:*`. Bedrock invoke stays on the Lambda execution role.
+- `PassRoleCdkCfnExec` is required so CloudFormation can use the bootstrap cfn-exec role.
+- `AssumeCdkBootstrapRoles` avoids “could not be used to assume … Proceeding anyway” warnings.
+- First-time `cdk bootstrap` is a separate, wider one-time admin action (not this CI role).
+- If CloudFormation reports a missing action, add only that action — resource names use the `PrReadinessCoachStack-*` prefix.
+- **Public repo logs:** Deploy uses quiet OIDC (`scripts/configure-aws-oidc.sh`) so STS `assumedRoleId` is never printed, masks account id + stack outputs, then pipes CDK through `node dist/ci/redact-deploy-log.js`. Fetch `ApiUrl` / API key locally when setting secrets.
+
+## 3. GitHub repository settings
+
+| Name | Type | Value |
+|------|------|--------|
+| `AWS_ROLE_ARN` | **Secret** | IAM role ARN from step 2 |
+| `AWS_REGION` | **Variable** (optional) | e.g. `ap-southeast-2` |
+| `PR_READY_OWNER_EMAIL` | **Secret** (or Variable) | Cognito owner invite email |
+
+After deploy, also set `PR_READY_API_URL` and `PR_READY_API_KEY` for [PR Comments](/walkthrough/pr-comments/). Do **not** commit these values. Fork PRs on a public repo do not receive Actions secrets.
+
+## 4. Prove deploy CI
+
+Push or merge to `main` → Actions → **Deploy** green (jobs `deploy` then `deploy-amplify`; outputs are masked — fetch `ApiUrl` / key value locally). You can also run **Deploy** via `workflow_dispatch`.
+
+:::caution
+OIDC trust too broad (`repo:OWNER/REPO:*` or `*`) weakens a public repo — lock deploy to `main`.
+:::
+
+:::tip
+Optional CDK diff on PRs: set repo variable `ENABLE_CDK_DIFF=true`. Default trust is `refs/heads/main` only — extend trust for pull-request refs if you enable that job, or the assume-role will fail.
+:::

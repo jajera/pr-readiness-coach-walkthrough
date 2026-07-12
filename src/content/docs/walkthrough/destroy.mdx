@@ -1,0 +1,47 @@
+---
+title: Destroy
+description: Tear down the PrReadinessCoachStack and optionally remove CDK bootstrap leftovers from the demo account.
+---
+
+Use the same account/region session as deploy (`AWS_PROFILE`, `AWS_REGION`, `CDK_DEFAULT_*`).
+
+## App stack
+
+Remove the app stack when finished with the demo account/region. This also deletes resources CDK created for the Coach:
+
+- Cognito user pool (owner UI)
+- DynamoDB run-history table (if enabled)
+- Amplify app/branch
+- API Gateway + Lambda (+ API key / usage plan)
+
+```bash
+npx cdk destroy PrReadinessCoachStack --force
+```
+
+GitHub secrets (`PR_READY_API_URL`, `PR_READY_API_KEY`, …) are **not** deleted automatically — remove or rotate them in the repo settings if you are done with the demo.
+
+## Optional: CDK bootstrap leftovers
+
+Only if you do not need further CDK deploys in this account/region. Bootstrap created toolkit stack `CDKToolkit` and assets bucket `cdk-hnb659fds-assets-<account>-<region>` (unless you customized the qualifier).
+
+```bash
+aws cloudformation delete-stack --stack-name CDKToolkit
+aws cloudformation wait stack-delete-complete --stack-name CDKToolkit
+```
+
+Then empty and delete the assets bucket if it remains:
+
+```bash
+ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+BUCKET="cdk-hnb659fds-assets-${ACCOUNT}-${AWS_REGION}"
+aws s3 rm "s3://${BUCKET}" --recursive
+aws s3 rb "s3://${BUCKET}"
+```
+
+:::caution
+Destroying the app stack does **not** revoke Bedrock model agreements or Service Quotas requests.
+:::
+
+:::danger
+Do not delete `CDKToolkit` / the assets bucket if other stacks in the same account/region still depend on that bootstrap.
+:::

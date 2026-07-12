@@ -1,0 +1,50 @@
+---
+title: ready.yml
+description: Definition of Ready configuration for test globs, forbidden paths, diff size limits, allowlists, and custom regex blockers.
+---
+
+Optional project rules live in root `ready.yml`. The CLI, API payload builder, and PR workflow load this file so heuristics stay project-specific.
+
+Example adapted from upstream:
+
+```yaml
+testFilePatterns:
+  - "**/*.test.ts"
+  - "**/*.test.js"
+  - "**/tests/**"
+forbiddenPatterns:
+  - "*.env"
+  - "*.env.*"
+  - "*.pem"
+  - "*credentials*"
+maxDiffSizeBytes: 102400
+docsPathAllowlist:
+  - "docs/**"
+  - "**/*.md"
+testPathAllowlist:
+  - "tests/**"
+  - "**/__tests__/**"
+  - "fixtures/**"
+customBlockers:
+  - pattern: "(?://|#)\\s*HACK\\b"
+    severity: blocker
+    description: "Unfinished-work markers in comments"
+  - pattern: "(?://|#)\\s*no-commit\\b"
+    severity: warning
+    description: "Commit-blocking markers should be removed before PR"
+```
+
+## Field guide
+
+| Field | Purpose |
+|-------|---------|
+| `testFilePatterns` | Globs treated as test files when assessing coverage signals |
+| `forbiddenPatterns` | Paths that should not appear in a ready branch |
+| `maxDiffSizeBytes` | Soft cap before large-diff handling |
+| `docsPathAllowlist` | Docs soft-skips for line heuristics |
+| `testPathAllowlist` | Ignore unit-test fixtures (including sample secrets) for line heuristics |
+| `customBlockers` | Extra regex rules with `blocker` or `warning` severity |
+
+:::tip
+`testPathAllowlist` keeps fixture secrets under `tests/**` and `fixtures/**` from failing local hooks and CI heuristics.
+:::

@@ -1,0 +1,48 @@
+---
+title: Overview
+description: What the PR Readiness Coach is, who it is for, and how this walkthrough relates to the upstream product repository.
+---
+
+import Tooltip from '@/components/Tooltip.astro';
+
+This site is the documentation companion for [jajera/pr-readiness-coach](https://github.com/jajera/pr-readiness-coach). Product code (CLI, Lambda, CDK, web UI, hooks) lives upstream; pages here adapt the operator walkthrough, Builder Center article, and capture notes into a progressive guide.
+
+| What this is | What this is not |
+| --- | --- |
+| Static walkthrough and architecture reference | The application or CDK source of truth |
+| Operational guidance for every product surface | A live AWS lab |
+| Companion docs for the product repo | A substitute for reading upstream when debugging code |
+
+## Vision
+
+Opening a pull request should feel like a confident hand-off. <Tooltip term="pr-readiness-coach" label="PR Readiness Coach" /> gathers branch context, runs fast <Tooltip term="heuristics" label="heuristics" />, then (when available) walks a short multi-agent <Tooltip term="bedrock" label="Bedrock" /> pipeline: Diff Analyst → Risk Reviewer → Ship Coach. You get a structured <Tooltip term="verdict" label="verdict" /> with blockers, warnings, checklist, draft PR title/body, and top actions.
+
+The same core powers four entry points:
+
+1. Local CLI (`pr-ready`)
+2. AWS API (API Gateway + Lambda) used by GitHub Actions
+3. Optional Kiro IDE hooks (warn-only)
+4. Owner-only Amplify SPA (Cognito → run history + Try it)
+
+## Who this is for
+
+- Developers checking readiness before opening a PR
+- Teams wanting warn-only CI coaching comments
+- Kiro users wanting local save / on-demand feedback
+- Operators running fixture demos or deploying the CDK stack
+
+## Success criteria
+
+- Run `fixtures/demo.sh` and see expected READY / NOT READY verdicts without AWS
+- Optionally deploy the stack in `ap-southeast-2`, call `/analyze`, and open the Cognito-gated UI
+- Understand that CI and hooks are <Tooltip term="warn-only" label="warn-only" /> — they coach, they do not hard-gate merges in v1
+
+## Non-goals
+
+- Hard merge gates, WAF, or IAM SigV4 for the API
+- Replacing code review or security scanning products
+- Duplicating Terraform/CDK modules inside this docs repo
+
+:::tip
+Start with [Quick Start](/walkthrough/quick-start/) for fixtures, then [Architecture](/architecture/overview/) before deploying.
+:::

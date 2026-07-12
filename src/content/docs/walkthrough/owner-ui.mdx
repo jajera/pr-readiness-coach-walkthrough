@@ -1,0 +1,78 @@
+---
+title: Owner UI
+description: Cognito owner-only Amplify SPA for run history and Try it, with Vite bake-time env and zip deploy after CDK.
+---
+
+import Tooltip from '@/components/Tooltip.astro';
+
+The owner UI lives under upstream `web/`. Cognito sign-in → run history + Try it. Self-sign-up is **disabled**; only the invited owner email can sign in.
+
+| Client | Credential | Routes |
+|--------|------------|--------|
+| Amplify SPA (browser) | Cognito email/password → JWT `Authorization: Bearer` | `GET /runs`, `GET /runs/{runId}`, `POST /ui/analyze` |
+| GitHub Actions / CLI | API key (`x-api-key`) | `POST /analyze` |
+
+## Invite the owner
+
+Pass the owner email on CDK deploy (or set Actions secret / variable `PR_READY_OWNER_EMAIL`):
+
+```bash
+export PR_READY_OWNER_EMAIL=you@example.com
+npx cdk deploy --require-approval never -c enableDynamo=true -c ownerEmail="$PR_READY_OWNER_EMAIL"
+```
+
+If the user was not created by CDK, create once:
+
+```bash
+POOL_ID="$(aws cloudformation describe-stacks --stack-name PrReadinessCoachStack \
+  --query "Stacks[0].Outputs[?OutputKey=='CognitoUserPoolId'].OutputValue" --output text)"
+aws cognito-idp admin-create-user \
+  --user-pool-id "$POOL_ID" \
+  --username "$PR_READY_OWNER_EMAIL" \
+  --user-attributes Name=email,Value="$PR_READY_OWNER_EMAIL" Name=email_verified,Value=true \
+  --desired-delivery-mediums EMAIL
+```
+
+Invited users start in `FORCE_CHANGE_PASSWORD`. Prefer signing in on the SPA (it prompts for a permanent password), or set one via console / `admin-set-user-password --permanent`.
+
+## Amplify Hosting (zip path)
+
+Hosting uses <Tooltip term="amplify-zip" label="Amplify zip deploy" /> — not a GitHub↔Amplify console connection.
+
+1. **CDK** creates an Amplify app + `main` branch (`enableAutoBuild: false`, no repository)
+2. **Separate job** `deploy-amplify` (after CDK) runs `scripts/deploy-amplify.sh`:
+   - Reads `ApiUrl` + Cognito outputs from the stack
+   - Builds `web/` with `VITE_*` baked in
+   - Zip-uploads (`create-deployment` → upload → `start-deployment`)
+
+```bash
+# After CDK deploy
+npm run deploy:amplify
+# App URL:
+aws cloudformation describe-stacks --stack-name PrReadinessCoachStack \
+  --query "Stacks[0].Outputs[?OutputKey=='AppUrl'].OutputValue" --output text
+```
+
+## Caveats
+
+- **Vite bake-time env:** `VITE_API_URL` / Cognito IDs are compiled into the JS bundle. The Amplify job **must** run after CDK so those outputs exist. Re-run `deploy-amplify` whenever API/Cognito outputs change.
+- **Separate jobs on purpose:** CDK failures stay in `deploy`; SPA/build/Amplify failures stay in `deploy-amplify`.
+- **No `VITE_API_KEY`:** browser auth is Cognito JWT only — never put the API key in Amplify / Vite env.
+- Root `amplify.yml` is unused for this zip path (buildSpec on the Amplify app is console-compat only).
+- After the first `AppUrl` is known, you may tighten API Gateway CORS from `*` to that origin in a follow-up.
+
+:::caution
+Primary gate is Cognito inside the app. Optional Amplify **Access control** on the Hosting URL is defense-in-depth only.
+:::
+
+## Local UI without Amplify
+
+```bash
+cd web
+cp .env.example .env.local   # fill Cognito + ApiUrl
+npm run dev
+```
+
+## Cost notes
+
+DynamoDB on-demand + ~30-day TTL; Cognito free tier covers a single user; Amplify Hosting free tier is usually enough for a private demo. Bedrock invoke cost dominates real usage.

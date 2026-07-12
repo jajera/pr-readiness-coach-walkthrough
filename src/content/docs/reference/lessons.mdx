@@ -1,0 +1,42 @@
+---
+title: Lessons
+description: Weekend-build lessons on graceful degradation, timeouts, Bedrock quotas, Amplify zip deploy, and fixture-first demos.
+---
+
+Lessons from shipping PR Readiness Coach as a weekend productivity build — shared core, four surfaces, warn-only CI.
+
+## Ship the highest-leverage pieces
+
+Weekend constraints force sharp cuts. Pretty-printer round-trips, parallel agents, retries, and AgentCore samples are interesting — and they are also how a weekend demo never ships. The highest leverage pieces were:
+
+- Shared core types (CLI, Lambda, hooks, and UI stay comparable)
+- Fixture-first demos (`fixtures/demo-app` + `fixtures/demo.sh`)
+- Graceful degradation on agent failure
+
+Architecture stayed pipes-and-filters: collect context → heuristic pre-screen → sequential agents → format report. One language end-to-end (TypeScript) for app and CDK.
+
+## Fail open on AI, fail closed on secrets
+
+“Fail closed” feels virtuous for secrets, but for a coach product, fail-open on AI with a still-useful heuristic report keeps CI comments trustworthy when Bedrock is slow or models are not enabled. Prefer HTTP 200 with a degraded report over a hard API failure.
+
+Heuristics remain the reproducible baseline — including `docsPathAllowlist` / `testPathAllowlist`. In full mode, heuristic blockers do **not** skip AI; Ship Coach merges local and model findings. The Lambda also re-runs heuristics on the submitted payload so CI cannot be tricked by client-only findings for security-sensitive blockers.
+
+## Timeouts need headroom
+
+Sequential Bedrock calls want ~20s each and a Lambda budget of at least 90 seconds (512 MB). Earlier drafts with 60s / 10s were too tight. Save hooks stay heuristic-only under 30s; full Bedrock is on-demand ([Kiro Hooks](/walkthrough/kiro-hooks/)). API Gateway REST sync (~29s) means truncated or slow full-mode calls fall back to local heuristics in [PR Comments](/walkthrough/pr-comments/).
+
+## Region and quotas matter
+
+Sydney defaults are Nova Lite plus Claude Haiku 4.5 on an AU inference profile. Claude 3 Haiku is LEGACY and can hard-deny. Account quotas at zero / `NOT_AUTHORIZED` are a show stopper for full mode even with AdministratorAccess — smoke Converse before calling the stack “AI ready” ([AWS Deploy](/walkthrough/deploy-aws/)).
+
+## Amplify zip + dual auth
+
+Zip-deploy after CDK avoids a GitHub↔Amplify connection and keeps SPA failures in a separate job. Vite bake-time env means re-running `deploy-amplify` when outputs change. API keys stay off the browser; Cognito JWTs gate the SPA ([Owner UI](/walkthrough/owner-ui/)). Deploy uses GitHub Actions OIDC on `main` — no long-lived AWS keys ([GitHub OIDC](/walkthrough/github-oidc/)).
+
+## Warn-only by design
+
+PR analysis always exits `0` — coach via comment and artifact, never a hard merge gate in v1. Kiro hooks match that contract.
+
+## AI can over-flag
+
+Once AI runs, it can over-flag harmless docs (for example a README link to the fixture demo). Treat that as coach output to review — use `--local` fixtures for deterministic READY / NOT READY demos ([Demo](/walkthrough/demo/)).

@@ -1,0 +1,55 @@
+---
+title: PR Comments
+description: Warn-only GitHub Actions workflow that posts a readiness comment, uploads a JSON artifact, and falls back to local heuristics.
+---
+
+`.github/workflows/pr-ready.yml` builds base/head context → POST deployed `/analyze` → upserts a single Markdown PR comment marked `<!-- pr-readiness-coach -->` → uploads artifact → always exits `0`.
+
+If API secrets are missing or the API returns non-200 (including API Gateway’s ~29s sync limit), the workflow falls back to **local heuristics** on the runner and still posts a useful comment. Truncated diffs also skip the API and use local heuristics (full Bedrock via the gateway would likely HTTP 504).
+
+Runners need no Bedrock credentials for the happy path — the Lambda core handles AI. Local fallback keeps comments useful when secrets or the API are unavailable.
+
+## Secrets (four Actions secrets)
+
+Set these under Settings → Secrets and variables → Actions. Deploy secrets first ([OIDC](/walkthrough/github-oidc/) + [AWS Deploy](/walkthrough/deploy-aws/)); add the PR analysis pair **after** a live API exists.
+
+| Name | Type | Used by | Value |
+|------|------|---------|--------|
+| `AWS_ROLE_ARN` | **Secret** | Deploy (OIDC) | IAM role ARN for `deploy.yml` |
+| `PR_READY_OWNER_EMAIL` | **Secret** (or Variable) | Deploy / Cognito invite | Owner email (`selfSignUpEnabled: false`) |
+| `PR_READY_API_URL` | **Secret** | `pr-ready.yml` | Stack `ApiUrl` (base URL ending in `/prod/`, before `analyze`) |
+| `PR_READY_API_KEY` | **Secret** | `pr-ready.yml` | API key **value** from `get-api-key --include-value` (not `ApiKeyId`) |
+
+Optional **variable** (not a secret): `AWS_REGION` (default `ap-southeast-2`) for Deploy.
+
+### Set the PR analysis pair after deploy
+
+```bash
+aws cloudformation describe-stacks --stack-name PrReadinessCoachStack \
+  --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" --output text
+
+aws apigateway get-api-key --api-key <ApiKeyId> --include-value --query value --output text
+
+gh secret set PR_READY_API_URL -R OWNER/REPO --body "$PR_READY_API_URL"
+gh secret set PR_READY_API_KEY -R OWNER/REPO --body "$PR_READY_API_KEY"
+```
+
+:::danger
+Never put the key value in the repo, PR comments, or workflow `echo` debug (`set -x` / `curl -v`). Fork PRs do not receive Actions secrets (heuristics fallback — expected).
+:::
+
+## Behavior
+
+- Loads root `ready.yml` into the context payload (`docsPathAllowlist`, `testPathAllowlist`, …)
+- `npm run build` before analyze so `dist/` is available
+- Curl timeout ~29s (API Gateway REST sync limit); non-200 → local heuristics
+- Artifact `readiness-report` retained 14 days
+- `::warning::` annotation when verdict is NOT READY (job still green — warn-only)
+- Comment upsert depends on the HTML marker `<!-- pr-readiness-coach -->` in the body
+- Large PR diffs may hit the 1 MB API body limit or the diff truncation path
+
+## Setup order
+
+1. Deploy the stack (manual CDK or OIDC Deploy) so `ApiUrl` / `ApiKeyId` exist
+2. Set all four secrets above
+3. Open or push a PR — expect a coach comment; full mode when API secrets work, heuristics otherwise

@@ -1,0 +1,65 @@
+---
+title: Demo
+description: Run fixture demos, full local Bedrock analysis, and remote API checks against a deployed stack.
+---
+
+Work from the upstream product repo after `npm install` (and `npm run build` if you have not built yet).
+
+## Heuristic fixtures (no Bedrock)
+
+No AWS credentials required. `fixtures/demo.sh` runs both paths with `--local --path … --json` and asserts verdicts + exit codes.
+
+```bash
+chmod +x fixtures/demo.sh
+./fixtures/demo.sh
+```
+
+Or run the CLI directly:
+
+```bash
+npm run pr-ready -- --local --path fixtures/demo-app/not-ready
+npm run pr-ready -- --local --path fixtures/demo-app/ready
+```
+
+| Path | Verdict | Exit | Why |
+|------|---------|------|-----|
+| `fixtures/demo-app/not-ready` | **NOT READY** | `1` | Fake `.env` secrets, TODOs, debug logs, missing tests |
+| `fixtures/demo-app/ready` | **READY** | `0` | Tests present, no heuristic issues |
+
+All fixture secrets are placeholders only. Use this path for a deterministic READY / NOT READY demo.
+
+## Full local (needs Bedrock)
+
+Needs working Bedrock in `AWS_REGION` (see [AWS Deploy](/walkthrough/deploy-aws/) smoke tests):
+
+```bash
+export AWS_PROFILE=<your-profile>
+export AWS_REGION=ap-southeast-2
+aws sso login --profile "$AWS_PROFILE"
+npm run pr-ready --
+```
+
+Expect `Mode: full`. Verdict on a real branch can be **NOT READY** even when heuristics are clean — Risk/Ship Coach sometimes over-flag docs (for example a README link to `fixtures/demo.sh`). That is useful coach output to review, not proof of a leaked secret.
+
+## Remote API (after deploy)
+
+After [AWS Deploy](/walkthrough/deploy-aws/), call the live API the same way GitHub Actions does:
+
+```bash
+export PR_READY_API_URL="$(aws cloudformation describe-stacks \
+  --stack-name PrReadinessCoachStack \
+  --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" --output text)"
+export PR_READY_API_KEY="$(aws apigateway get-api-key --api-key "$(aws cloudformation describe-stacks \
+  --stack-name PrReadinessCoachStack \
+  --query "Stacks[0].Outputs[?OutputKey=='ApiKeyId'].OutputValue" --output text)" \
+  --include-value --query value --output text)"
+npm run pr-ready -- --api --api-url "$PR_READY_API_URL" --api-key "$PR_READY_API_KEY"
+```
+
+:::tip
+Prove the stack with local `cdk deploy` + CLI `--api` before wiring GitHub secrets. Then set `PR_READY_API_URL` / `PR_READY_API_KEY` (and the other Actions secrets) for [PR Comments](/walkthrough/pr-comments/).
+:::
+
+:::danger
+Do not echo `PR_READY_API_KEY` into logs or commit it. Prefer assigning it in the shell and never pasting it into chat or PRs.
+:::
