@@ -12,6 +12,8 @@ const ALLOWED_ACCOUNTS = new Set(['123456789012', '987654321098']);
 /** Public service hostnames that are not account-specific resources. */
 const ALLOWED_DNS = [
   /^sts\.amazonaws\.com$/i,
+  /^lambda\.amazonaws\.com$/i,
+  /^cloudformation\.amazonaws\.com$/i,
   /^token\.actions\.githubusercontent\.com$/i,
   /^docs\.aws\.amazon\.com$/i,
 ];

@@ -5,6 +5,17 @@ description: Deploy the PR Readiness Coach stack from GitHub Actions using OIDC,
 
 `.github/workflows/deploy.yml` in the product repo assumes an IAM role via OIDC — **no long-lived AWS access keys**. Safe for a public repository if secrets stay in GitHub and the role trust is scoped. Deploy also supports `workflow_dispatch` for a manual OIDC smoke without a code push.
 
+## CI shape
+
+| Workflow | When | What |
+|----------|------|------|
+| `ci.yml` | Pull requests | Root tests/build, `web/` build, `cdk synth -c enableDynamo=true`; optional `cdk-diff` when `ENABLE_CDK_DIFF=true` |
+| `deploy.yml` | Push to `main` / `workflow_dispatch` | Job `deploy` (CDK) then `deploy-amplify` (zip) — separate so failures are obvious |
+| `pr-ready.yml` | PR open/sync | Warn-only coach comment ([PR Comments](/walkthrough/pr-comments/)) |
+| Dependabot | Weekly | `github-actions` + `npm` |
+
+![GitHub Actions Deploy workflow with ci, deploy, and deploy-amplify jobs](/pr-readiness-coach-walkthrough/screenshots/01-deploy-actions.png)
+
 ## 1. Create the GitHub OIDC identity provider
 
 Once per AWS account, if missing:
@@ -41,7 +52,11 @@ Example name `github-pr-readiness-coach-deploy` with trust limited to **this** r
 
 ### Minimum deploy permissions (prefer over AdministratorAccess)
 
-Scope the role to `cdk deploy` / `cdk destroy` of `PrReadinessCoachStack` with DynamoDB + Cognito + Amplify zip deploy. Assumes the account is already bootstrapped (`CDKToolkit` + `cdk-hnb659fds-assets-*`). Replace `ACCOUNT_ID` and `REGION` everywhere.
+Scope the role to `cdk deploy` / `cdk destroy` of `PrReadinessCoachStack` with DynamoDB + Cognito + Amplify zip deploy. Assumes the account is already bootstrapped (`CDKToolkit` + `cdk-hnb659fds-assets-*`).
+
+**Full JSON** (copy-paste ready, with `ACCOUNT_ID` / `REGION` placeholders): [Deploy IAM Policy](/reference/deploy-iam-policy/).
+
+Sid overview:
 
 | Sid | Covers |
 |-----|--------|
@@ -62,11 +77,8 @@ Scope the role to `cdk deploy` / `cdk destroy` of `PrReadinessCoachStack` with D
 Policy notes:
 
 - This role **deploys** infra; it does **not** need `bedrock:*`. Bedrock invoke stays on the Lambda execution role.
-- `PassRoleCdkCfnExec` is required so CloudFormation can use the bootstrap cfn-exec role.
-- `AssumeCdkBootstrapRoles` avoids “could not be used to assume … Proceeding anyway” warnings.
 - First-time `cdk bootstrap` is a separate, wider one-time admin action (not this CI role).
-- If CloudFormation reports a missing action, add only that action — resource names use the `PrReadinessCoachStack-*` prefix.
-- **Public repo logs:** Deploy uses quiet OIDC (`scripts/configure-aws-oidc.sh`) so STS `assumedRoleId` is never printed, masks account id + stack outputs, then pipes CDK through `node dist/ci/redact-deploy-log.js`. Fetch `ApiUrl` / API key locally when setting secrets.
+- **Public repo logs:** Deploy uses quiet OIDC (`scripts/configure-aws-oidc.sh`) and `redact-deploy-log.js`. Fetch `ApiUrl` / API key locally when setting secrets.
 
 ## 3. GitHub repository settings
 
@@ -74,7 +86,7 @@ Policy notes:
 |------|------|--------|
 | `AWS_ROLE_ARN` | **Secret** | IAM role ARN from step 2 |
 | `AWS_REGION` | **Variable** (optional) | e.g. `ap-southeast-2` |
-| `PR_READY_OWNER_EMAIL` | **Secret** (or Variable) | Cognito owner invite email |
+| `PR_READY_OWNER_EMAIL` | **Secret** (preferred) or Variable | Cognito owner invite — Deploy reads **secret first**, then the Actions variable |
 
 After deploy, also set `PR_READY_API_URL` and `PR_READY_API_KEY` for [PR Comments](/walkthrough/pr-comments/). Do **not** commit these values. Fork PRs on a public repo do not receive Actions secrets.
 

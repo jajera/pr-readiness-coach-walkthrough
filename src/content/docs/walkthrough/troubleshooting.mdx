@@ -30,7 +30,8 @@ See [Owner UI](/walkthrough/owner-ui/) for invite and zip-deploy details.
 |---------|--------------|-------------|
 | First deploy fails on assets / bootstrap | Account not bootstrapped | `cdk bootstrap` once per account/region |
 | `s3:PutBucketPublicAccessBlock` denied | Hardened account SCP | Retry bootstrap with `--public-access-block-configuration false` |
-| Prefer not to use AdminAccess for CI | Deploy role too wide | Use the minimum deploy IAM policy ([GitHub OIDC](/walkthrough/github-oidc/)); bootstrap stays a one-time wider admin step |
+| Prefer not to use AdminAccess for CI | Deploy role too wide | Use the minimum deploy IAM policy ([Deploy IAM Policy](/reference/deploy-iam-policy/)); bootstrap stays a one-time wider admin step |
+| Lambda ESM bundling / CJS deps fail | Missing ESM output format | Product stack uses `OutputFormat.ESM` + createRequire banner for some CJS deps — if you fork the CDK app, keep that bundling shape |
 
 API key **value** is never a stack output — retrieve once with `get-api-key --include-value` into GitHub Secrets only.
 

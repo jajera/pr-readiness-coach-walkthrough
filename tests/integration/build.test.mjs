@@ -24,13 +24,14 @@ const EXPECTED_PAGES = [
   'src/content/docs/walkthrough/troubleshooting.mdx',
   'src/content/docs/reference/faq.mdx',
   'src/content/docs/reference/secrets.mdx',
+  'src/content/docs/reference/deploy-iam-policy.mdx',
   'src/content/docs/reference/lessons.mdx',
   'src/content/docs/reference/links.mdx',
 ];
 
 describe('Integration: build and structure', () => {
   it('all content pages exist', () => {
-    expect(EXPECTED_PAGES).toHaveLength(19);
+    expect(EXPECTED_PAGES).toHaveLength(20);
     for (const p of EXPECTED_PAGES) {
       expect(fs.existsSync(path.join(ROOT, p)), p).toBe(true);
     }
@@ -56,9 +57,26 @@ describe('Integration: build and structure', () => {
     expect(deploy).toBeGreaterThan(surfaces);
     expect(ops).toBeGreaterThan(deploy);
     expect(ref).toBeGreaterThan(ops);
+    expect(cfg).toContain("slug: 'walkthrough/demo'");
+    expect(cfg).toContain("slug: 'reference/deploy-iam-policy'");
     expect(cfg).toContain('starlight-theme-vintage');
     expect(cfg).toContain('starlight-base-path');
     expect(cfg).not.toContain("slug: 'reference/glossary'");
+  });
+
+  it('capture screenshots are present', () => {
+    const shots = [
+      'public/screenshots/01-deploy-actions.png',
+      'public/screenshots/01-amplify-ui.png',
+      'public/screenshots/01-amplify-try-it.png',
+      'public/screenshots/02-pr-comment-ready.png',
+      'public/screenshots/02-pr-comment-warnings.png',
+      'public/screenshots/03-kiro-hooks-panel.png',
+      'public/screenshots/03-hook-run.png',
+    ];
+    for (const p of shots) {
+      expect(fs.existsSync(path.join(ROOT, p)), p).toBe(true);
+    }
   });
 
   it('overview links to the upstream product repo', () => {

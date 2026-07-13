@@ -12,7 +12,7 @@ Use only approved Placeholder_IDs in fenced code blocks, command examples, and o
 | ARNs | Must use an allowed account ID or the literal `ACCOUNT_ID`, and suffix resource names with `EXAMPLE` where practical |
 | Emails | `you@example.com` only |
 | Secrets | Never paste real API keys; use `...` or `$PR_READY_API_KEY` |
-| DNS | Hostnames must include `EXAMPLE`, or be an allowlisted public service endpoint (`sts.amazonaws.com`, `token.actions.githubusercontent.com`) |
+| DNS | Hostnames must include `EXAMPLE`, or be an allowlisted public service endpoint (`sts.amazonaws.com`, `lambda.amazonaws.com`, `cloudformation.amazonaws.com`, `token.actions.githubusercontent.com`) |
 | Regions | Prefer `REGION` or documented defaults like `ap-southeast-2` |
 
 The quality gate (`scripts/check-placeholders.mjs`) rejects other 12-digit IDs and non-placeholder AWS DNS inside fenced code blocks. Prose outside code blocks is not scanned for account IDs.

@@ -33,10 +33,10 @@ Do **not** put the API key in Amplify / Vite env. The browser uses Cognito JWTs 
 
 ## Deploy shape
 
-Infrastructure is AWS CDK (TypeScript) in `ap-southeast-2`:
+Infrastructure is AWS **CDK** (TypeScript) — not SAM — targeting `ap-southeast-2`:
 
 1. CDK creates API + Lambda + Cognito + DynamoDB + Amplify app/branch (`enableAutoBuild: false`)
 2. Separate `deploy-amplify` job / `npm run deploy:amplify` builds `web/` and zip-uploads
 3. GitHub Actions <Tooltip term="oidc" label="OIDC" /> on `main` — no long-lived AWS keys in the product repo
 
-Editable diagram source for this site: `docs/pr-readiness-architecture.drawio` (SVG served from `public/diagrams/`).
+Editable diagram source for this site: `docs/pr-readiness-architecture.drawio` (SVG/PNG under `public/diagrams/`).

@@ -16,7 +16,7 @@ Set these under Settings → Secrets and variables → Actions. Deploy secrets f
 | Name | Type | Used by | Value |
 |------|------|---------|--------|
 | `AWS_ROLE_ARN` | **Secret** | Deploy (OIDC) | IAM role ARN for `deploy.yml` |
-| `PR_READY_OWNER_EMAIL` | **Secret** (or Variable) | Deploy / Cognito invite | Owner email (`selfSignUpEnabled: false`) |
+| `PR_READY_OWNER_EMAIL` | **Secret** (preferred) or Variable | Deploy / Cognito invite | Owner email — secret first, then variable |
 | `PR_READY_API_URL` | **Secret** | `pr-ready.yml` | Stack `ApiUrl` (base URL ending in `/prod/`, before `analyze`) |
 | `PR_READY_API_KEY` | **Secret** | `pr-ready.yml` | API key **value** from `get-api-key --include-value` (not `ApiKeyId`) |
 
@@ -53,3 +53,13 @@ Never put the key value in the repo, PR comments, or workflow `echo` debug (`set
 1. Deploy the stack (manual CDK or OIDC Deploy) so `ApiUrl` / `ApiKeyId` exist
 2. Set all four secrets above
 3. Open or push a PR — expect a coach comment; full mode when API secrets work, heuristics otherwise
+
+## Demo evidence
+
+Clean full-mode comment:
+
+![GitHub Actions PR comment showing READY verdict](/pr-readiness-coach-walkthrough/screenshots/02-pr-comment-ready.png)
+
+Comment with coach warnings (job still green — warn-only):
+
+![GitHub Actions PR comment showing READY WITH WARNINGS](/pr-readiness-coach-walkthrough/screenshots/02-pr-comment-warnings.png)

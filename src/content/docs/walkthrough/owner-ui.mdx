@@ -14,7 +14,7 @@ The owner UI lives under upstream `web/`. Cognito sign-in → run history + Try 
 
 ## Invite the owner
 
-Pass the owner email on CDK deploy (or set Actions secret / variable `PR_READY_OWNER_EMAIL`):
+Pass the owner email on CDK deploy. For GitHub Deploy, set Actions **secret** `PR_READY_OWNER_EMAIL` (preferred); Deploy reads the secret first, then falls back to an Actions **variable** of the same name.
 
 ```bash
 export PR_READY_OWNER_EMAIL=you@example.com
@@ -72,6 +72,16 @@ cd web
 cp .env.example .env.local   # fill Cognito + ApiUrl
 npm run dev
 ```
+
+## Demo evidence
+
+Runs list (NOT READY / READY / READY WITH WARNINGS):
+
+![Amplify owner UI runs list showing mixed readiness verdicts](/pr-readiness-coach-walkthrough/screenshots/01-amplify-ui.png)
+
+Try it — `POST /ui/analyze` with Cognito JWT:
+
+![Amplify Try it panel posting analyze with Cognito JWT](/pr-readiness-coach-walkthrough/screenshots/01-amplify-try-it.png)
 
 ## Cost notes
 
