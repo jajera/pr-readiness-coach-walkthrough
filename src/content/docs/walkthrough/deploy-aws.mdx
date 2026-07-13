@@ -59,7 +59,7 @@ aws bedrock-runtime converse \
 
 **Alternatives** (override via env):
 
-- US regions: Claude 3.5 Haiku via `CLAUDE_MODEL_ID` / `SHIP_COACH_MODEL_ID`
+- US regions: Claude 3.5 Haiku `anthropic.claude-3-5-haiku-20241022-v1:0` (or `us.anthropic.claude-3-5-haiku-20241022-v1:0`) via `CLAUDE_MODEL_ID` / `SHIP_COACH_MODEL_ID`
 - Global Haiku 4.5 profile: `global.anthropic.claude-haiku-4-5-20251001-v1:0`
 - Do **not** default to Claude 3 Haiku (`anthropic.claude-3-haiku-20240307-v1:0`) — it is **LEGACY**
 - Claude unavailable: set `SHIP_COACH_MODEL_ID` or `CLAUDE_MODEL_ID` to `amazon.nova-lite-v1:0`

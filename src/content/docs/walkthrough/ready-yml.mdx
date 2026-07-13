@@ -21,11 +21,14 @@ maxDiffSizeBytes: 102400
 docsPathAllowlist:
   - "docs/**"
   - "**/*.md"
+# Fixture demos + unit-test trees intentionally contain markers/sample secrets.
+# Directory-scoped only — avoid bare **/*.spec.ts which can match non-test paths.
 testPathAllowlist:
   - "tests/**"
   - "**/__tests__/**"
   - "fixtures/**"
 customBlockers:
+  # Comment-form only so ready.yml pattern/description lines do not self-match
   - pattern: "(?://|#)\\s*HACK\\b"
     severity: blocker
     description: "Unfinished-work markers in comments"
@@ -46,5 +49,9 @@ customBlockers:
 | `customBlockers` | Extra regex rules with `blocker` or `warning` severity |
 
 :::tip
-`testPathAllowlist` keeps fixture secrets under `tests/**` and `fixtures/**` from failing local hooks and CI heuristics.
+`testPathAllowlist` keeps fixture secrets under `tests/**` and `fixtures/**` from failing local hooks and CI heuristics. Keep it **directory-scoped** — bare globs like `**/*.spec.ts` can match non-test paths.
+:::
+
+:::caution
+Write `customBlockers` patterns in **comment form** only (for example `(?://|#)\\s*HACK\\b`). If the pattern matches plain `HACK` text, the `ready.yml` description lines can self-match and fail the coach.
 :::

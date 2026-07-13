@@ -20,14 +20,14 @@ export default defineConfig({
           tag: 'meta',
           attrs: {
             property: 'og:image',
-            content: 'https://jajera.github.io/pr-readiness-coach-walkthrough/og-image.svg',
+            content: 'https://jajera.github.io/pr-readiness-coach-walkthrough/og-image.png',
           },
         },
         {
           tag: 'meta',
           attrs: {
             name: 'twitter:image',
-            content: 'https://jajera.github.io/pr-readiness-coach-walkthrough/og-image.svg',
+            content: 'https://jajera.github.io/pr-readiness-coach-walkthrough/og-image.png',
           },
         },
       ],
@@ -49,6 +49,7 @@ export default defineConfig({
           items: [
             { label: 'Overview', slug: 'walkthrough/overview' },
             { label: 'Quick Start', slug: 'walkthrough/quick-start' },
+            { label: 'Demo', slug: 'walkthrough/demo' },
           ],
         },
         {
@@ -73,7 +74,6 @@ export default defineConfig({
             { label: 'AWS Deploy', slug: 'walkthrough/deploy-aws' },
             { label: 'GitHub OIDC', slug: 'walkthrough/github-oidc' },
             { label: 'PR Comments', slug: 'walkthrough/pr-comments' },
-            { label: 'Demo', slug: 'walkthrough/demo' },
           ],
         },
         {
@@ -88,6 +88,7 @@ export default defineConfig({
           items: [
             { label: 'FAQ', slug: 'reference/faq' },
             { label: 'Secrets & Outputs', slug: 'reference/secrets' },
+            { label: 'Deploy IAM Policy', slug: 'reference/deploy-iam-policy' },
             { label: 'Lessons', slug: 'reference/lessons' },
             { label: 'Links', slug: 'reference/links' },
           ],
