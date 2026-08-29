@@ -10,7 +10,7 @@ Documentation companion site (Astro + Starlight) for deploying and using the PR 
 
 **Upstream product:** [jajera/pr-readiness-coach](https://github.com/jajera/pr-readiness-coach)
 
-**Deployed site:** <https://jajera.github.io/pr-readiness-coach-walkthrough/>
+**Deployed site:** <https://pr-readiness-coach-walkthrough.johna.kiwi/>
 
 ## Quick start
 

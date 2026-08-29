@@ -6,8 +6,8 @@ import starlightImageZoom from 'starlight-image-zoom';
 import mermaid from 'astro-mermaid';
 
 export default defineConfig({
-  site: 'https://jajera.github.io',
-  base: '/pr-readiness-coach-walkthrough/',
+  site: "https://pr-readiness-coach-walkthrough.johna.kiwi",
+  base: "/",
   integrations: [
     mermaid(),
     starlight({
