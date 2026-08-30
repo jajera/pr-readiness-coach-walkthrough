@@ -11,6 +11,9 @@ export default defineConfig({
   integrations: [
     mermaid(),
     starlight({
+      components: {
+        Head: "./src/components/Head.astro",
+      },
       title: 'PR Readiness Coach Walkthrough',
       favicon: '/favicon.svg',
       description:
