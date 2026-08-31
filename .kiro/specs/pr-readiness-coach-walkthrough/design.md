@@ -8,8 +8,8 @@ Companion documentation site for `jajera/pr-readiness-coach`. Mirrors the Astro 
 
 | ID | Decision | Rationale |
 |----|----------|-----------|
-| AD-1 | Astro 6 + Starlight + vintage theme | Matches sister walkthrough sites; GitHub Pages friendly |
-| AD-2 | `base: /pr-readiness-coach-walkthrough/` | GitHub project Pages path |
+| AD-1 | Astro 7 + Starlight + Patina theme | Matches sister walkthrough sites; custom-domain Pages |
+| AD-2 | `base: "/"` | Custom domain root (`pr-readiness-coach-walkthrough.johna.kiwi`) |
 | AD-3 | Content from OPERATOR_WALKTHROUGH + ARTICLE + capture notes | Operator bible + narrative + pitfalls without copying product code |
 | AD-4 | Pin upstream links to `main` | Link checker enforces the `main` branch ref |
 | AD-5 | Tooltip + `glossary.ts` | Inline definitions; no `/reference/glossary` slug |
