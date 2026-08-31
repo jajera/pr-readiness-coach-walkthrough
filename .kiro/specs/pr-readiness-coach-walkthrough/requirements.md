@@ -6,7 +6,7 @@ This document defines the requirements for a static documentation site that teac
 
 ## Glossary
 
-- **Site**: The Astro + Starlight static documentation site deployed to GitHub Pages at the repository base path `/pr-readiness-coach-walkthrough/`
+- **Site**: The Astro + Starlight static documentation site deployed to GitHub Pages at the custom domain root `https://pr-readiness-coach-walkthrough.johna.kiwi/` (`base: "/"`)
 - **Upstream_Product_Repo**: The GitHub repository `jajera/pr-readiness-coach` containing CLI, core, Lambda, hooks, web UI, and CDK
 - **Upstream_Branch**: The `main` branch of Upstream_Product_Repo — all tree/blob links in the Site pin to this branch
 - **Surface**: One product entrypoint documented by the Site — CLI, API, GitHub Actions PR comments, Kiro hooks, or owner UI

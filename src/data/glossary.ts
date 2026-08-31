@@ -1,4 +1,12 @@
-export const glossary: Record<string, string> = {
+export type GlossaryEntry =
+  | string
+  | {
+      definition: string;
+      url?: string;
+      urlLabel?: string;
+    };
+
+export const glossary: Record<string, GlossaryEntry> = {
   'pr-readiness-coach':
     'AI coach that answers “is this branch ready for a PR?” via heuristics and optional Bedrock agents.',
   'pr-ready':
@@ -36,3 +44,15 @@ export const glossary: Record<string, string> = {
   placeholderid:
     'Synthetic identifier in docs (e.g. ACCOUNT_ID, you@example.com) instead of real account IDs, API keys, or emails.',
 };
+
+export function resolveGlossaryEntry(entry: GlossaryEntry | undefined) {
+  if (!entry) return { definition: undefined, url: undefined, urlLabel: undefined };
+  if (typeof entry === "string") {
+    return { definition: entry, url: undefined, urlLabel: undefined };
+  }
+  return {
+    definition: entry.definition,
+    url: entry.url,
+    urlLabel: entry.urlLabel ?? entry.url,
+  };
+}

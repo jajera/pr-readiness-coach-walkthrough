@@ -1,23 +1,25 @@
-# pr-readiness-coach-walkthrough
+# PR Readiness Coach Walkthrough
 
-Documentation companion site (Astro + Starlight) for deploying and using the PR Readiness Coach.
+Documentation companion for deploying and using the **PR Readiness Coach** — CLI, API, GitHub Actions, Kiro hooks, and owner UI.
 
-| What this is | What this is not |
-| --- | --- |
-| A static walkthrough and architecture reference site | The application / CLI / CDK source |
-| Operational guidance for CLI, API, CI, Kiro hooks, and owner UI | A live AWS lab environment |
-| Companion docs with upstream links pinned to `main` | The source of truth for product code |
+**Site:** https://pr-readiness-coach-walkthrough.johna.kiwi/
 
-**Upstream product:** [jajera/pr-readiness-coach](https://github.com/jajera/pr-readiness-coach)
-
-**Deployed site:** <https://pr-readiness-coach-walkthrough.johna.kiwi/>
+Upstream product: [jajera/pr-readiness-coach](https://github.com/jajera/pr-readiness-coach).
 
 ## Quick start
 
 ```bash
 npm install
 npm run dev
-npm run build
+```
+
+Open the local preview URL (usually http://localhost:4321/).
+
+## Structure
+
+```text
+src/content/docs/     Walkthrough (Astro Starlight)
+public/               Favicon, CNAME, OG image, diagrams, screenshots
 ```
 
 ## Surfaces covered

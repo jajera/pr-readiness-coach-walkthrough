@@ -44,23 +44,25 @@ describe('Integration: build and structure', () => {
 
   it('sidebar follows progressive walkthrough sections', () => {
     const cfg = fs.readFileSync(path.join(ROOT, 'astro.config.mjs'), 'utf8');
-    expect(cfg).toContain("label: 'Home'");
-    const intro = cfg.indexOf("label: 'Introduction'");
-    const arch = cfg.indexOf("label: 'Architecture'");
-    const surfaces = cfg.indexOf("label: 'Surfaces'");
-    const deploy = cfg.indexOf("label: 'Deploy'");
-    const ops = cfg.indexOf("label: 'Operations'");
-    const ref = cfg.indexOf("label: 'Reference'");
+    expect(cfg).toMatch(/label:\s*["']Home["']/);
+    const intro = cfg.search(/label:\s*["']Introduction["']/);
+    const arch = cfg.search(/label:\s*["']Architecture["']/);
+    const surfaces = cfg.search(/label:\s*["']Surfaces["']/);
+    const deploy = cfg.search(/label:\s*["']Deploy["']/);
+    const ops = cfg.search(/label:\s*["']Operations["']/);
+    const ref = cfg.search(/label:\s*["']Reference["']/);
     expect(intro).toBeGreaterThan(-1);
     expect(arch).toBeGreaterThan(intro);
     expect(surfaces).toBeGreaterThan(arch);
     expect(deploy).toBeGreaterThan(surfaces);
     expect(ops).toBeGreaterThan(deploy);
     expect(ref).toBeGreaterThan(ops);
-    expect(cfg).toContain("slug: 'walkthrough/demo'");
-    expect(cfg).toContain("slug: 'reference/deploy-iam-policy'");
-    expect(cfg).toContain('starlight-theme-vintage');
-    expect(cfg).toContain('starlight-base-path');
+    expect(cfg).toMatch(/slug:\s*["']walkthrough\/demo["']/);
+    expect(cfg).toMatch(/slug:\s*["']reference\/deploy-iam-policy["']/);
+    expect(cfg).toContain('patina-tokens.css');
+    expect(cfg).toContain('ThemeSelect');
+    expect(cfg).not.toContain('starlight-theme-vintage');
+    expect(cfg).not.toContain('starlight-base-path');
     expect(cfg).not.toContain("slug: 'reference/glossary'");
   });
 
@@ -94,4 +96,13 @@ describe('Integration: build and structure', () => {
       env: { ...process.env, SKIP_LINK_CHECK: '1' },
     });
   }, 180_000);
+
+  it('built pages use root-relative screenshot paths', () => {
+    const html = fs.readFileSync(
+      path.join(ROOT, 'dist/walkthrough/github-oidc/index.html'),
+      'utf8',
+    );
+    expect(html).toContain('src="/screenshots/01-deploy-actions.png"');
+    expect(html).not.toContain('/pr-readiness-coach-walkthrough/screenshots/');
+  });
 });
